@@ -5,3 +5,4 @@
 /.venv
 /.vs
 /__pycache__
+/warren.db
