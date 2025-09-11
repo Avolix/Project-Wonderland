@@ -1,36 +1,24 @@
 import os
 
 import litellm
-import sqlite3
 
 
 from typing import Annotated, List
 from typing_extensions import TypedDict
 from fastapi import FastAPI, Depends
 from pydantic import BaseModel
-from sqlmodel import Field, Session, SQLModel, create_engine
-
-
-"""
-class Params(TypedDict):
-    model: str
-    endpoint: str | None = None
-    api_key: str
-    api_version: str | None = None
-    api_base: str
-    timeout: int | None = 10
+from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 class Model(BaseModel):
     model_name: str
     litellm_params: Params
     model_info: dict
-"""
 
-# EXTREMELY basic key storage and endpoint storage for custom endpoints
-# Solely for use in early dev
-class Keybase(SQLModel, table=True):
+class Provider(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     provider_name: str = Field(index=True)
+    provider_syntax: str | None = "openai"
+    endpoint: str
     api_key: str
     api_base: str | None = Field(default=None, index=True)
     
@@ -73,18 +61,17 @@ app = FastAPI(title="Project Wonderland",
 @app.on_event("startup")
 async def startup_db_client():
     create_db_tables()
+    set_provider_keys(SessionDep)
 
-@app.post("/keybase")
-async def add_keybase(keybase: Keybase, session: SessionDep) -> Keybase:
-    session.add(keybase)
+@app.post("/provider")
+async def add_provider(provider: Provider, session: SessionDep) -> Provider:
+    session.add(provider)
     session.commit()
-    session.refresh(keybase)
-    return keybase
-
+    session.refresh(provider)
+    return provider
 
 @app.post("/chat/completions")
-async def api_completion(request: CompletionRequest, session: SessionDep):
-       parse_request(request, session)
+async def api_completion(request: CompletionRequest):
        message_dict = [message for message in request.messages]
        try:
            response = await litellm.acompletion(model=request.model,
@@ -94,13 +81,25 @@ async def api_completion(request: CompletionRequest, session: SessionDep):
            response = e
        return response
 
+# Text Completions
+@app.post("/completions")
+
+# Lists available tools from provider
+# Filling for now
+@app.get("/tools")
+
+# List of models (per provider?)
+@app.get("/models")
+
+# "Count prompt tokens with supported backends"(?)
+@app.post("/tokens")
+
+# Filling for now
+@app.post("/embeddings")
 
 
-# Helper function for request parsing
-# Currently a proof of concept
-# This is also a terrible way of doing this don't @ me 
-def parse_request(request: CompletionRequest, session: SessionDep):
-    if "openrouter" in request.model:
-        request.model = "openrouter/" + request.model
-        keybase: Keybase = session.get(Keybase, 0)
-        os.environ["OPENROUTER_API_KEY"] = keybase.api_key
+def set_provider_keys(session: SessionDep):
+    statement = select(Provider)
+    providers = session.exec(statement)
+    for provider in providers:
+        exec("litellm.%s_key = %s" % (provider.name, provider.key))
