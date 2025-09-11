@@ -9,19 +9,14 @@ from fastapi import FastAPI, Depends
 from pydantic import BaseModel
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
-class Model(BaseModel):
-    model_name: str
-    litellm_params: Params
-    model_info: dict
-
 class Provider(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     provider_name: str = Field(index=True)
     provider_syntax: str | None = "openai"
-    endpoint: str
+    endpoint: str | None = None
     api_key: str
     api_base: str | None = Field(default=None, index=True)
-    
+
 # The messages JSON object required for
 # CompletionRequest
 
@@ -53,15 +48,15 @@ def get_session():
         yield session
 
 SessionDep = Annotated[Session, Depends(get_session)]
-# End of SQL block 
+# End of SQL block
 
-app = FastAPI(title="Project Wonderland", 
+app = FastAPI(title="Project Wonderland",
               summary="And down the rabbit hole we go...")
 
 @app.on_event("startup")
 async def startup_db_client():
     create_db_tables()
-    set_provider_keys(SessionDep)
+    set_provider_keys()
 
 @app.post("/provider")
 async def add_provider(provider: Provider, session: SessionDep) -> Provider:
@@ -82,24 +77,25 @@ async def api_completion(request: CompletionRequest):
        return response
 
 # Text Completions
-@app.post("/completions")
+# @app.post("/completions")
 
 # Lists available tools from provider
 # Filling for now
-@app.get("/tools")
+# @app.get("/tools")
 
 # List of models (per provider?)
-@app.get("/models")
+# @app.get("/models")
 
 # "Count prompt tokens with supported backends"(?)
-@app.post("/tokens")
+# @app.post("/tokens")
 
 # Filling for now
-@app.post("/embeddings")
+# @app.post("/embeddings")
 
 
-def set_provider_keys(session: SessionDep):
-    statement = select(Provider)
-    providers = session.exec(statement)
+def set_provider_keys():
+    with Session(engine) as session:
+        yield session
+        providers = session.exec(select(Provider))
     for provider in providers:
         exec("litellm.%s_key = %s" % (provider.name, provider.key))
