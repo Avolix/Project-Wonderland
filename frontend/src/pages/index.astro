@@ -1,7 +1,14 @@
 ---
 import Header from '../components/header.astro';
+import ChatLog from '../components/chatLog.svelte';
 import '../styles/global.css';
 ---
+<style>
+  .fullScreen {
+    height: 100%
+  }
+</style>
 <html>
   <Header/>
+  <ChatLog class="fullScreen" client:load/>
 </html>
