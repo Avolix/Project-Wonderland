@@ -1,7 +1,9 @@
 <script lang="ts">
     import {ChatMessage} from "../scripts/chatMessage"
     import ChatMessageComponent from "./chatMessageComponent.svelte";
-    import SvelteVirtualList from "@humanspeak/svelte-virtual-list"
+    import SvelteVirtualList from "@humanspeak/svelte-virtual-list";
+
+    let currentText =$state("");
 
     let chatMessages = $state([
         new ChatMessage("Owner 1", "Test Message"),
@@ -9,8 +11,7 @@
     ]);
 
     function addMessage() {
-        chatMessages.push(new ChatMessage("User", "Test message."));
-        console.log("Test.");
+        chatMessages.push(new ChatMessage("User", currentText));
     };
 
 </script>
@@ -22,6 +23,10 @@
         {/snippet}
     </SvelteVirtualList>
 </div>
+
+<textarea bind:value={currentText}>
+    
+</textarea>
 
 <button onclick={addMessage}>
 	Click Me
